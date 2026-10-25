@@ -13,14 +13,22 @@ const app = express();
 app.use(helmet());
 
 app.use(cors({
-  origin: [
-    config.cors.frontendUrl,
-    'http://localhost:5173',
-    'http://localhost:3000',
-  ],
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    // Allow Vercel, localhost, and configured frontend URL
+    if (
+      config.cors.frontendUrl === '*' ||
+      origin === config.cors.frontendUrl ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-Idempotency-Key', 'Authorization'],
-  credentials: false,
+  credentials: true,
 }));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
