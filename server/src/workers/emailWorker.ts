@@ -40,7 +40,8 @@ export function createEmailWorker(): Worker<EmailJobData, EmailJobResult> {
         to: job.data.to,
         subject: job.data.subject,
         body: job.data.body,
-        from: config.smtp.from || config.smtp.user,
+        // 'from' is intentionally omitted — smtpService picks the right sender
+        // based on the active provider (Resend vs Nodemailer)
         attachments: job.data.attachments,
       });
 

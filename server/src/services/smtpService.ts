@@ -100,7 +100,8 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 
 async function sendViaResend(opts: SendEmailOptions): Promise<SendEmailResult> {
   const resend = getResendClient();
-  const from = opts.from || config.resend.from;
+  // Always use the Resend-configured sender — only verified domains/addresses work
+  const from = config.resend.from;
 
   const resendAttachments = opts.attachments?.map((att) => ({
     filename: att.filename,
