@@ -30,9 +30,11 @@ export function createRedisConnection(): Redis {
   let conn: Redis;
 
   if (config.redis.url) {
+    // Auto-detect TLS from rediss:// scheme (Render, Upstash, etc.)
+    const needsTls = config.redis.tls || config.redis.url.startsWith('rediss://');
     const opts: RedisOptions = {
       ...base,
-      ...(config.redis.tls ? { tls: {} } : {}),
+      ...(needsTls ? { tls: { rejectUnauthorized: false } } : {}),
     };
     conn = new Redis(config.redis.url, opts);
   } else {
@@ -41,7 +43,7 @@ export function createRedisConnection(): Redis {
       host: config.redis.host,
       port: config.redis.port,
       password: config.redis.password || undefined,
-      ...(config.redis.tls ? { tls: {} } : {}),
+      ...(config.redis.tls ? { tls: { rejectUnauthorized: false } } : {}),
     });
   }
 
