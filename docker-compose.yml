@@ -1,0 +1,105 @@
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  redis-data:
+    name: email-scheduler-redis-data
+
+# ── Shared network ────────────────────────────────────────────────────────────
+networks:
+  scheduler-net:
+    driver: bridge
+
+services:
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: email-scheduler-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory-policy noeviction
+    ports:
+      - "6380:6379"           # Remapped host port to avoid collision with port 6379
+    volumes:
+      - redis-data:/data
+    networks:
+      - scheduler-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # ── API Server ────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: email-scheduler-api
+    restart: unless-stopped
+    env_file:
+      - path: ./server/.env
+        required: false
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    networks:
+      - scheduler-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', r => process.exit(r.statusCode===200?0:1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Background Worker ─────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: email-scheduler-worker
+    restart: unless-stopped
+    command: ["node", "dist/worker.js"]
+    env_file:
+      - path: ./server/.env
+        required: false
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+    networks:
+      - scheduler-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  # ── Frontend (dev hot-reload via Vite) ────────────────────────────────────────
+  client:
+    image: node:20-alpine
+    container_name: email-scheduler-client
+    working_dir: /app
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    env_file:
+      - path: ./client/.env
+        required: false
+    environment:
+      VITE_API_URL: http://localhost:3001
+    ports:
+      - "5173:5173"
+    networks:
+      - scheduler-net
+    depends_on:
+      - api
