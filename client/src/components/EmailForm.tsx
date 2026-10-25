@@ -1,9 +1,30 @@
-import React, { useState, useCallback, useId } from 'react';
+import React, { useState, useCallback, useId, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Send, Loader2, AlertCircle, CheckCircle2, Paperclip, X, FileText } from 'lucide-react';
 import { scheduleEmail } from '../services/api';
 import { toUtcIso, COMMON_TIMEZONES } from '../utils/dateUtils';
-import type { ScheduleEmailForm } from '../types';
+import type { ScheduleEmailForm, EmailAttachment } from '../types';
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = reader.result as string;
+      const base64 = res.split(',')[1] || '';
+      resolve(base64);
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
 
 function getLocalDefaults(): Pick<ScheduleEmailForm, 'date' | 'time' | 'timezone'> {
   const now = new Date();
@@ -30,8 +51,11 @@ const INITIAL_FORM: ScheduleEmailForm = {
 export const EmailForm: React.FC = () => {
   const navigate = useNavigate();
   const uid = useId();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<ScheduleEmailForm>(INITIAL_FORM);
+  const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
+  const [readingFiles, setReadingFiles] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ jobId: string; scheduledAt: string } | null>(null);
@@ -43,6 +67,54 @@ export const EmailForm: React.FC = () => {
     },
     []
   );
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (attachments.length + files.length > 10) {
+      setError('You can attach a maximum of 10 files.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setReadingFiles(true);
+    setError(null);
+
+    try {
+      const newAttachments: EmailAttachment[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`"${file.name}" exceeds the 5MB file size limit.`);
+        }
+
+        const base64 = await readFileAsBase64(file);
+        newAttachments.push({
+          filename: file.name,
+          content: base64,
+          contentType: file.type || 'application/octet-stream',
+          size: file.size,
+        });
+      }
+
+      const totalSize = [...attachments, ...newAttachments].reduce((acc, curr) => acc + (curr.size || 0), 0);
+      if (totalSize > 10 * 1024 * 1024) {
+        throw new Error('Total attachment size exceeds the 10MB limit.');
+      }
+
+      setAttachments((prev) => [...prev, ...newAttachments]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to read attached file');
+    } finally {
+      setReadingFiles(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (indexToRemove: number) => {
+    setAttachments((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,12 +138,20 @@ export const EmailForm: React.FC = () => {
         ? crypto.randomUUID()
         : `email-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const result = await scheduleEmail(
-        { to: form.to, subject: form.subject, body: form.body, scheduledAt, timezone: form.timezone },
+        {
+          to: form.to,
+          subject: form.subject,
+          body: form.body,
+          scheduledAt,
+          timezone: form.timezone,
+          attachments: attachments.length > 0 ? attachments : undefined,
+        },
         idempotencyKey
       );
 
       setSuccess({ jobId: result.jobId, scheduledAt: result.scheduledAt });
       setForm(INITIAL_FORM);
+      setAttachments([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to schedule email');
     } finally {
@@ -167,6 +247,66 @@ export const EmailForm: React.FC = () => {
             required
             rows={6}
           />
+        </div>
+
+        {/* Attachments */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="label mb-0">
+              Attachments <span className="text-zinc-400 font-normal text-[11px]">(Optional, max 10 files / 10MB)</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={readingFiles || attachments.length >= 10}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-2.5 py-1.5 rounded-md transition-colors border border-zinc-200 dark:border-zinc-750 disabled:opacity-50"
+            >
+              {readingFiles ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Paperclip className="w-3.5 h-3.5" />
+              )}
+              <span>{readingFiles ? 'Loading…' : 'Attach Files'}</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
+
+          {attachments.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {attachments.map((att, idx) => (
+                <div
+                  key={`${att.filename}-${idx}`}
+                  className="flex items-center justify-between p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 text-xs"
+                >
+                  <div className="flex items-center gap-2 min-w-0 mr-2">
+                    <FileText className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-zinc-800 dark:text-zinc-200 text-xs" title={att.filename}>
+                        {att.filename}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                        {att.size ? formatBytes(att.size) : 'File'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(idx)}
+                    className="p-1 text-zinc-400 hover:text-rose-500 dark:text-zinc-500 dark:hover:text-rose-400 transition-colors"
+                    title="Remove attachment"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Date + Time */}

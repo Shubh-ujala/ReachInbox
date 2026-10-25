@@ -44,6 +44,7 @@ export async function scheduleEmail(
     timezone: payload.timezone,
     createdAt,
     idempotencyKey: jobId,
+    attachments: payload.attachments,
   };
 
   try {

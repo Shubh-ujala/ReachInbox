@@ -1,5 +1,12 @@
 /** Mirror of server types — kept in sync manually */
 
+export interface EmailAttachment {
+  filename: string;
+  content: string; // base64 encoded string
+  contentType?: string;
+  size?: number; // bytes
+}
+
 export type JobStatus =
   | 'waiting'
   | 'delayed'
@@ -17,6 +24,7 @@ export interface EmailJobData {
   timezone: string;
   createdAt: string;
   idempotencyKey: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailJobResult {
@@ -61,6 +69,7 @@ export interface ScheduleEmailForm {
   date: string;       // local date portion yyyy-MM-dd
   time: string;       // local time HH:mm
   timezone: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface UserProfile {

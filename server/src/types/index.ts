@@ -2,12 +2,20 @@
  * Shared TypeScript types — used by both API routes and the worker.
  */
 
+export interface EmailAttachment {
+  filename: string;
+  content: string; // base64 encoded string
+  contentType?: string;
+  size?: number; // file size in bytes
+}
+
 export interface ScheduleEmailPayload {
   to: string;
   subject: string;
   body: string;
   scheduledAt: string; // ISO-8601 UTC string
   timezone: string;    // IANA timezone name e.g. "America/New_York"
+  attachments?: EmailAttachment[];
 }
 
 export type JobStatus =
@@ -27,6 +35,7 @@ export interface EmailJobData {
   timezone: string;
   createdAt: string;     // ISO-8601 UTC
   idempotencyKey: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailJobResult {

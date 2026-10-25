@@ -49,8 +49,8 @@ const scheduleLimiter = rateLimit({
 app.use(limiter);
 
 // ── Parsing ───────────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '256kb' }));
-app.use(express.urlencoded({ extended: true, limit: '256kb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 if (config.server.isDev) {

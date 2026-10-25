@@ -33,6 +33,18 @@ export const scheduleEmailSchema = z.object({
   timezone: z
     .string({ required_error: 'timezone is required' })
     .refine(isValidTimezone, { message: 'timezone must be a valid IANA timezone name' }),
+
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().min(1, 'Attachment filename required').max(255),
+        content: z.string().min(1, 'Attachment content required'),
+        contentType: z.string().optional(),
+        size: z.number().optional(),
+      })
+    )
+    .max(10, 'Maximum 10 attachments per email')
+    .optional(),
 }).superRefine((data, ctx) => {
   const now = Date.now();
   const scheduled = new Date(data.scheduledAt).getTime();

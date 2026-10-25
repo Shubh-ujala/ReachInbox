@@ -45,11 +45,14 @@ function getTransporter(): Transporter {
   return _transporter;
 }
 
+import type { EmailAttachment } from '../types';
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
   body: string;
   from?: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface SendEmailResult {
@@ -59,7 +62,7 @@ export interface SendEmailResult {
 
 /**
  * Send an email via Nodemailer.
- * Returns the message ID and Ethereal preview URL if available.
+ * Returns the message ID and delivery preview URL if available.
  *
  * Throws on SMTP error — BullMQ will catch the throw and mark the job as failed,
  * then retry according to the backoff policy.
@@ -75,6 +78,12 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
     subject: opts.subject,
     text: opts.body,
     html: `<div style="font-family:sans-serif;line-height:1.6">${opts.body.replace(/\n/g, '<br>')}</div>`,
+    attachments: opts.attachments?.map((att) => ({
+      filename: att.filename,
+      content: att.content,
+      encoding: 'base64',
+      contentType: att.contentType,
+    })),
   });
 
   // nodemailer.getTestMessageUrl returns the Ethereal preview link (string | false)

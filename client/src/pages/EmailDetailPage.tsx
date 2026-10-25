@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Mail, Calendar, Clock, Hash, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Mail, Calendar, Clock, Hash, RefreshCw, Paperclip, FileText } from 'lucide-react';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { LoadingState, ErrorMessage } from '../components/ui/States';
 import { useFetch } from '../hooks/useFetch';
@@ -72,6 +72,38 @@ export const EmailDetailPage: React.FC = () => {
                 {job.data.body}
               </pre>
             </div>
+
+            {/* Attachments */}
+            {job.data.attachments && job.data.attachments.length > 0 && (
+              <div className="card p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                    Attachments ({job.data.attachments.length})
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {job.data.attachments.map((att, idx) => (
+                    <div
+                      key={`${att.filename}-${idx}`}
+                      className="flex items-center gap-2.5 p-2.5 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs"
+                    >
+                      <FileText className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-zinc-800 dark:text-zinc-200" title={att.filename}>
+                          {att.filename}
+                        </p>
+                        {att.size ? (
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                            {(att.size / 1024).toFixed(1)} KB
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar metadata */}

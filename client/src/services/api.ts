@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiResponse, EmailJob, DashboardStats, UserProfile, AuthConfig } from '../types';
+import type { ApiResponse, EmailJob, DashboardStats, UserProfile, AuthConfig, EmailAttachment } from '../types';
 
 /**
  * Centralised API service layer.
@@ -81,6 +81,7 @@ export interface SchedulePayload {
   body: string;
   scheduledAt: string; // ISO-8601 UTC
   timezone: string;
+  attachments?: EmailAttachment[];
 }
 
 export async function scheduleEmail(

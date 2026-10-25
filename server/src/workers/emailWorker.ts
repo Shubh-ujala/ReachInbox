@@ -41,6 +41,7 @@ export function createEmailWorker(): Worker<EmailJobData, EmailJobResult> {
         subject: job.data.subject,
         body: job.data.body,
         from: config.smtp.from || config.smtp.user,
+        attachments: job.data.attachments,
       });
 
       await job.updateProgress(100);
