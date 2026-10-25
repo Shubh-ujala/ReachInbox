@@ -47,6 +47,7 @@ services:
       NODE_ENV: development
       REDIS_URL: redis://redis:6379
       PORT: 3001
+      DISABLE_IN_PROCESS_WORKER: "true"
     ports:
       - "3001:3001"
     networks:

@@ -19,8 +19,8 @@ async function start(): Promise<void> {
 
   let inProcessWorker: Worker | null = null;
 
-  // Optional: run worker inside same process (ideal for single-container hosting on Render / Railway)
-  if (process.env.RUN_WORKER_IN_PROCESS === 'true') {
+  // Run worker inside process unless explicitly disabled (ensures emails process on Render / single-service deployments)
+  if (process.env.DISABLE_IN_PROCESS_WORKER !== 'true') {
     try {
       await verifySmtp();
     } catch (err: unknown) {
@@ -28,7 +28,7 @@ async function start(): Promise<void> {
       logger.error('SMTP verification failed — check SMTP credentials', { message: msg });
     }
     inProcessWorker = createEmailWorker();
-    logger.info('📬 In-process BullMQ email worker started alongside API server');
+    logger.info('📬 BullMQ email worker started in-process');
   }
 
   const server = app.listen(config.server.port, () => {
