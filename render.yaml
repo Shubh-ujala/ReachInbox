@@ -27,6 +27,12 @@ services:
         sync: false
       - key: CLERK_SECRET_KEY
         sync: false
+      # ── Email Provider (Resend — HTTP API, no SMTP port blocking) ──
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      # ── Legacy SMTP (fallback if RESEND_API_KEY is not set) ──
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

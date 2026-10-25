@@ -47,6 +47,11 @@ export const config = {
     from: optional('SMTP_FROM', ''),
   },
 
+  resend: {
+    apiKey: optional('RESEND_API_KEY', ''),
+    from: optional('RESEND_FROM', optional('SMTP_FROM', 'ReachInbox <onboarding@resend.dev>')),
+  },
+
   cors: {
     frontendUrl: optional('FRONTEND_URL', 'http://localhost:5173'),
   },
