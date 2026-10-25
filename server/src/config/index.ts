@@ -12,13 +12,15 @@ function required(name: string): string {
 }
 
 function optional(name: string, fallback = ''): string {
-  return process.env[name] ?? fallback;
+  const val = process.env[name];
+  if (val === undefined || val.trim() === '') return fallback;
+  return val.trim().replace(/^["']|["']$/g, '');
 }
 
 function optionalInt(name: string, fallback: number): number {
   const val = process.env[name];
-  if (!val) return fallback;
-  const parsed = parseInt(val, 10);
+  if (!val || val.trim() === '') return fallback;
+  const parsed = parseInt(val.trim(), 10);
   if (isNaN(parsed)) throw new Error(`${name} must be an integer, got "${val}"`);
   return parsed;
 }
@@ -49,7 +51,7 @@ export const config = {
 
   resend: {
     apiKey: optional('RESEND_API_KEY', ''),
-    from: optional('RESEND_FROM', optional('SMTP_FROM', 'ReachInbox <onboarding@resend.dev>')),
+    from: optional('RESEND_FROM', 'ReachInbox <onboarding@resend.dev>'),
   },
 
   cors: {

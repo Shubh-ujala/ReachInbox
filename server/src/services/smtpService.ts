@@ -100,8 +100,12 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 
 async function sendViaResend(opts: SendEmailOptions): Promise<SendEmailResult> {
   const resend = getResendClient();
-  // Always use the Resend-configured sender — only verified domains/addresses work
-  const from = config.resend.from;
+  // Always use a valid Resend sender format — only verified domains or onboarding@resend.dev work
+  let from = config.resend.from?.trim() || 'ReachInbox <onboarding@resend.dev>';
+  from = from.replace(/^["']|["']$/g, '');
+  if (!from.includes('@')) {
+    from = 'ReachInbox <onboarding@resend.dev>';
+  }
 
   const resendAttachments = opts.attachments?.map((att) => ({
     filename: att.filename,
